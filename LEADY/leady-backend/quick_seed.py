@@ -4,11 +4,8 @@ from app.models.lead import Lead
 
 def seed_data():
     url = "http://overpass-api.de/api/interpreter"
-    
-    # 1. Agregamos un 'User-Agent' para que no nos bloqueen
     headers = {'User-Agent': 'LeadyApp/1.0'}
     
-    # 2. Consulta un poco más limpia
     query = """
     [out:json][timeout:60];
     area["name"="Caracas"]->.search;
@@ -24,25 +21,43 @@ def seed_data():
     print("Enviando petición a OpenStreetMap...")
     response = requests.get(url, params={'data': query}, headers=headers)
     
-    # 3. DEPURACIÓN: Si el estatus no es 200, imprimimos qué nos respondió el servidor
     if response.status_code != 200:
-        print(f"Error de servidor: {response.status_code}")
-        print("Respuesta completa:", response.text)
+        print(f"Error: {response.status_code}\n{response.text}")
         return
 
     data = response.json()
     
     with app.app_context():
-        # Limpiamos tabla para no duplicar datos si ejecutas esto varias veces
         db.session.query(Lead).delete() 
         
+        count = 0
         for el in data['elements']:
-            name = el.get('tags', {}).get('name')
-            if name:
-                lead = Lead(name=name, category="restaurant", lat=el['lat'], lon=el['lon'])
+            tags = el.get('tags', {})
+            name = tags.get('name')
+            
+            # --- CORRECCIÓN CLAVE AQUÍ ---
+            # Si el elemento tiene 'lat', úsala; si no, busca en 'center'
+            lat = el.get('lat') or el.get('center', {}).get('lat')
+            lon = el.get('lon') or el.get('center', {}).get('lon')
+            
+            # Solo guardamos si tenemos coordenadas y nombre
+            if name and lat and lon:
+                # Obtenemos la categoría real del elemento (no solo 'restaurant')
+                cat = tags.get('amenity') or tags.get('office') or tags.get('building', 'general')
+                
+                lead = Lead(
+                    name=name, 
+                    category=cat, 
+                    lat=float(lat), 
+                    lon=float(lon),
+                    address=tags.get('addr:street'),
+                    phone=tags.get('phone')
+                )
                 db.session.add(lead)
+                count += 1
+                
         db.session.commit()
-    print("¡Base de datos poblada con éxito!")
+    print(f"¡Éxito! Base de datos poblada con {count} nuevos registros.")
 
 if __name__ == "__main__":
     seed_data()
