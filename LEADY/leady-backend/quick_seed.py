@@ -6,19 +6,25 @@ def seed_data():
     url = "http://overpass-api.de/api/interpreter"
     headers = {'User-Agent': 'LeadyApp/1.0'}
     
-    query = """
-    [out:json][timeout:60];
-    area["name"="Caracas"]->.search;
+    # Bounding Box para la Gran Caracas [sur, oeste, norte, este]
+    # Cubre: Libertador, Chacao, Baruta y Sucre.
+    bbox = "10.4000,-67.0500,10.5400,-66.7500"
+    
+    # Se añade el bbox al inicio y se eliminan las referencias a area.search
+    query = f"""
+    [out:json][timeout:90][bbox:{bbox}];
     (
-      node["amenity"~"^(bank|clinic|hospital|office)$"](area.search);
-      node["office"](area.search);
-      node["craft"](area.search);
-      way["building"~"^(office|industrial|commercial)$"](area.search);
+      node["amenity"~"^(bank|clinic|hospital|restaurant|pharmacy|cafe)$"];
+      node["office"];
+      node["craft"];
+      way["building"~"^(office|industrial|commercial)$"];
     );
     out center;
     """
     
-    print("Enviando petición a OpenStreetMap...")
+    print("Enviando petición de radar geográfico a OpenStreetMap...")
+    print(f"Zona de escaneo: {bbox}")
+    
     response = requests.get(url, params={'data': query}, headers=headers)
     
     if response.status_code != 200:
@@ -28,6 +34,7 @@ def seed_data():
     data = response.json()
     
     with app.app_context():
+        # Limpiamos tabla para evitar duplicados
         db.session.query(Lead).delete() 
         
         count = 0
@@ -35,14 +42,11 @@ def seed_data():
             tags = el.get('tags', {})
             name = tags.get('name')
             
-            # --- CORRECCIÓN CLAVE AQUÍ ---
-            # Si el elemento tiene 'lat', úsala; si no, busca en 'center'
             lat = el.get('lat') or el.get('center', {}).get('lat')
             lon = el.get('lon') or el.get('center', {}).get('lon')
             
-            # Solo guardamos si tenemos coordenadas y nombre
             if name and lat and lon:
-                # Obtenemos la categoría real del elemento (no solo 'restaurant')
+                # Determinamos la categoría principal para el frontend
                 cat = tags.get('amenity') or tags.get('office') or tags.get('building', 'general')
                 
                 lead = Lead(
@@ -57,7 +61,7 @@ def seed_data():
                 count += 1
                 
         db.session.commit()
-    print(f"¡Éxito! Base de datos poblada con {count} nuevos registros.")
+    print(f"¡Éxito! Base de datos poblada con {count} empresas en la Gran Caracas.")
 
 if __name__ == "__main__":
     seed_data()
