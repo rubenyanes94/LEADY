@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { LeadMap } from './components/Map/LeadMap';
-import { getLeads, getLeadById } from './services/LeadService'; // Importamos la nueva función
+import { getLeads, getLeadById } from './services/LeadService';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './App.css'; 
 
 function App() {
   const [leads, setLeads] = useState<any[]>([]);
@@ -10,7 +11,6 @@ function App() {
   
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
-  const [loadingDetails, setLoadingDetails] = useState(false); // Estado para saber si está cargando los datos del backend
 
   useEffect(() => {
     getLeads().then(data => {
@@ -20,22 +20,17 @@ function App() {
     });
   }, []);
 
-  // FUNCIÓN CLAVE: Se ejecuta al hacer clic en un pin del mapa
   const handleMarkerClick = async (lead: any) => {
-    setLoadingDetails(true);
-    setSelectedLead(lead); // Mostramos los datos básicos de inmediato para mejor UX
-    
+    setSelectedLead(lead);
     try {
-      // Hacemos la petición al backend para traer los datos reales (dirección, tlf, mail, etc.)
       const fullLeadData = await getLeadById(lead.id);
-      setSelectedLead(fullLeadData); // Reemplazamos con la data completa de la BD
+      setSelectedLead(fullLeadData);
     } catch (error) {
-      console.error("Error al traer los detalles del negocio:", error);
-    } finally {
-      setLoadingDetails(false);
+      console.error("Error al traer los detalles:", error);
     }
   };
 
+  // Esta es la función que ahora se dispara con el botón
   const applyFilters = () => {
     setSelectedLead(null);
     if (selectedCategory === '') {
@@ -49,96 +44,172 @@ function App() {
   };
 
   return (
-    <div className="container-fluid p-0 vh-100 overflow-hidden">
-      <div className="row g-0 h-100">
+    // Cambiamos el layout principal a una columna flex que ocupa el 100% del alto (vh-100)
+    <div className="container-fluid p-0 d-flex flex-column vh-100 app-container">
+      
+      {/* ÁREA PRINCIPAL (CRECE PARA OCUPAR EL ESPACIO DISPONIBLE) */}
+      <div className="row g-0 flex-grow-1 overflow-hidden">
         
-        {/* PANEL LATERAL */}
-        <div className="col-md-3 bg-dark text-white p-4 shadow d-flex flex-column" style={{ zIndex: 1000 }}>
-          <h2 className="mb-4 text-warning fw-bold">LEADY</h2>
+        {/* PANEL LATERAL (ESTILO VONSEL) */}
+        <div className="col-md-4 col-lg-3 vonsel-sidebar d-flex flex-column h-100" style={{ zIndex: 1000, overflowY: 'auto' }}>
           
-          <div className="mb-4">
-            <h6 className="text-uppercase text-secondary mb-3">Segmentación de Mercado</h6>
-            <select 
-              className="form-select mb-3 bg-dark text-white border-secondary"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+          <div className="vonsel-card d-flex justify-content-between align-items-center py-3">
+            <h3 className="m-0 fw-bold" style={{ letterSpacing: '-1px' }}>
+              LEAD<span style={{ color: '#38d39f' }}>Y</span>
+            </h3>
+            <div className="text-muted">
+              <span className="fs-5">👤</span> 
+            </div>
+          </div>
+          
+          <div className="vonsel-card">
+            <span className="section-title">Business Types</span>
+            <input 
+              type="text" 
+              className="form-control vonsel-input mb-2" 
+              placeholder="Search like you do on Google Maps" 
+            />
+            <div>
+              <span 
+                className={`pill-badge ${selectedCategory === '' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('')}
+              >
+                All
+              </span>
+              <span 
+                className={`pill-badge ${selectedCategory === 'restaurant' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('restaurant')}
+              >
+                Restaurants
+              </span>
+              <span 
+                className={`pill-badge ${selectedCategory === 'office' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('office')}
+              >
+                Offices
+              </span>
+              <span 
+                className={`pill-badge ${selectedCategory === 'clinic' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('clinic')}
+              >
+                Clinics
+              </span>
+              <span 
+                className={`pill-badge ${selectedCategory === 'bank' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory('bank')}
+              >
+                Banks
+              </span>
+            </div>
+          </div>
+
+          <div className="vonsel-card">
+            <span className="section-title">Search Area</span>
+            <div className="row g-2 mb-3">
+              <div className="col-6">
+                <label className="text-muted small">Country</label>
+                <select className="form-select vonsel-select" disabled>
+                  <option>Venezuela</option>
+                </select>
+              </div>
+              <div className="col-6">
+                <label className="text-muted small">Region</label>
+                <select className="form-select vonsel-select" disabled>
+                  <option>Distrito Capital</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="vonsel-card flex-grow-1 mb-0">
+            <span className="section-title">Qualified Data</span>
+            <div className="data-row">
+              <div className="d-flex gap-2">
+                <input type="checkbox" className="form-check-input mt-1" defaultChecked />
+                <div>
+                  <div className="fw-bold" style={{ fontSize: '0.9rem' }}>Business data</div>
+                  <div className="text-muted" style={{ fontSize: '0.75rem' }}>Name, address, category...</div>
+                </div>
+              </div>
+              <span className="free-badge">Basic</span>
+            </div>
+
+            <div className="data-row">
+              <div className="d-flex gap-2">
+                <input type="checkbox" className="form-check-input mt-1" defaultChecked />
+                <div>
+                  <div className="fw-bold" style={{ fontSize: '0.9rem' }}>Enriched data</div>
+                  <div className="text-muted" style={{ fontSize: '0.75rem' }}>Emails, phones, website...</div>
+                </div>
+              </div>
+              <span className="free-badge bg-warning text-dark">Smart</span>
+            </div>
+          </div>
+
+          {/* BOTÓN DE ACCIÓN FIJO ABAJO */}
+          <div className="vonsel-card mt-3 mb-2 p-3 text-center border-primary border-opacity-25">
+            <div className="d-flex justify-content-between align-items-center mb-3 px-2">
+              <span className="text-muted small fw-bold">Leads encontrados:</span>
+              <span className="border border-success text-success bg-success bg-opacity-10 rounded px-3 py-1 fw-bold fs-5">
+                {/* Mostramos dinámicamente la cantidad de leads */}
+                {filteredLeads.length}
+              </span>
+            </div>
+            <button 
+              className="btn w-100 btn-gradient shadow-sm"
+              onClick={applyFilters} // <-- AQUÍ SE CONECTA LA LÓGICA
             >
-              <option value="">Todas las categorías</option>
-              <option value="office">Oficinas y Corporativos</option>
-              <option value="restaurant">Restaurantes y Gastronomía</option>
-              <option value="bank">Bancos y Finanzas</option>
-              <option value="clinic">Clínicas y Hospitales</option>
-              <option value="industrial">Industrial y Comercial</option>
-            </select>
-            <button className="btn btn-warning w-100 fw-bold" onClick={applyFilters}>
-              Aplicar Filtro
+              Access businesses
             </button>
           </div>
 
-          <hr className="border-secondary" />
-
-          {/* DETALLES DEL LEAD */}
-          <div className="flex-grow-1 overflow-auto mt-2">
-            {!selectedLead ? (
-              <div className="text-center text-secondary mt-5">
-                <p>Selecciona un negocio en el mapa para ver sus detalles aquí.</p>
-              </div>
-            ) : (
-              <div className="card bg-secondary text-white border-0 position-relative">
-                <div className="card-body">
-                  <h4 className="card-title text-warning">{selectedLead.name}</h4>
-                  <span className="badge bg-dark mb-3">{selectedLead.category}</span>
-                  
-                  {/* Animación o aviso de carga si el backend está enriqueciendo */}
-                  {loadingDetails && (
-                    <div className="alert alert-warning py-1 px-2 mb-3" style={{ fontSize: '12px' }}>
-                      ⚡ Conectando con la base de datos y buscando información web...
-                    </div>
-                  )}
-                  
-                  <div className="mb-2">
-                    <small className="text-light d-block">📍 Dirección:</small>
-                    <span>{selectedLead.address || 'No especificada en mapa'}</span>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <small className="text-light d-block">📞 Teléfono:</small>
-                    <span>{selectedLead.phone || 'No disponible'}</span>
-                  </div>
-
-                  <div className="mb-2">
-                    <small className="text-light d-block">📧 Email:</small>
-                    <span>{selectedLead.email || 'No disponible'}</span>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <small className="text-light d-block">🌐 Sitio Web / Redes:</small>
-                    {selectedLead.website ? (
-                      <a href={selectedLead.website} target="_blank" rel="noreferrer" className="text-warning fw-bold">
-                        Visitar Sitio Oficial
-                      </a>
-                    ) : (
-                      <span className="text-white-50">No especificado</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* ÁREA DEL MAPA */}
-        <div className="col-md-9 h-100 position-relative">
+        <div className="col-md-8 col-lg-9 h-100 position-relative">
           {loading ? (
             <div className="d-flex h-100 justify-content-center align-items-center bg-light">
-              <h4 className="text-muted">Escaneando Caracas...</h4>
+              <div className="spinner-border text-primary" style={{width: '3rem', height: '3rem'}} role="status">
+                <span className="visually-hidden">Cargando...</span>
+              </div>
             </div>
           ) : (
-            // Vinculamos la nueva función controladora del clic
             <LeadMap leads={filteredLeads} onMarkerClick={handleMarkerClick} />
+          )}
+          
+          {selectedLead && (
+            <div className="position-absolute bottom-0 start-0 m-4 p-4 bg-white rounded-4 shadow-lg" style={{ zIndex: 1000, minWidth: '320px', border: '1px solid #eef1f5' }}>
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <h5 className="fw-bold text-dark m-0 pe-3">{selectedLead.name}</h5>
+                <button type="button" className="btn-close shadow-none" onClick={() => setSelectedLead(null)}></button>
+              </div>
+              <span className="badge bg-light text-primary border border-primary mb-3 text-uppercase" style={{ fontSize: '0.7rem' }}>
+                {selectedLead.category}
+              </span>
+              <p className="mb-2 small text-muted d-flex align-items-center gap-2">
+                <span>📍</span> {selectedLead.address || 'Caracas, Venezuela'}
+              </p>
+              <p className="mb-2 small text-muted d-flex align-items-center gap-2">
+                <span>📞</span> {selectedLead.phone || 'No disponible'}
+              </p>
+              {selectedLead.website ? (
+                <a href={selectedLead.website} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary w-100 mt-2 fw-bold">
+                  Visitar Sitio Web
+                </a>
+              ) : (
+                <div className="text-center mt-2 p-2 bg-light rounded small text-muted">
+                  Dominio web no verificado
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
+
+      <footer className="vonsel-footer text-center py-2 text-muted" style={{ fontSize: '0.75rem' }}>
+        <span>&copy; {new Date().getFullYear()} LEADY Business Finder. Desarrollado con datos de OpenStreetMap y búsqueda web asíncrona.</span>
+      </footer>
+
     </div>
   );
 }
